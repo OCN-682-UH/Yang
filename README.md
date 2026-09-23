@@ -13,6 +13,7 @@ Current contents include:
 - **Week 3** – Penguin plotting practice: a ridgeline (density) plot of flipper length by sex and species, built with ggplot2/ggridges
 - Additional weekly assignments and course materials will be added as the semester progresses
 - **Week 4** – dplyr and tidyr practice: penguin body mass summaries and a violin plot (dplyr), plus cleaning, separating, pivoting, and summarizing the Maunalua Bay groundwater chemistry data with a log-log scatter plot (tidyr)
+- **Week 5** – Joins and dates with lubridate: rounding and joining a conductivity logger to a depth logger by exact timestamp with inner_join(), averaging by minute, and a patchwork time-series plot of depth, temperature, and salinity
 
 The purpose of this repository is to practice organizing research projects, writing reproducible scripts, using Git and GitHub for version control, and documenting analyses clearly.
 
@@ -33,6 +34,10 @@ My academic interests include finance, data analysis, statistical modeling, and 
 │   ├── scripts
 │   └── output
 ├── Week_04/
+│   ├── data
+│   ├── scripts
+│   └── output
+├── Week_05/
 │   ├── data
 │   ├── scripts
 │   └── output
