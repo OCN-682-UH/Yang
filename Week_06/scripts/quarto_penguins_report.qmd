@@ -1,0 +1,176 @@
+---
+title: "Bill and Flipper Morphology of Palmer Archipelago Penguins"
+subtitle: "A Quarto report exploring body size relationships across three penguin species"
+author: "Yang An"
+date: today
+format:
+  html:
+    theme: flatly
+    toc: true
+    toc-location: left
+    code-fold: true
+    code-summary: "Show the code"
+    fig-align: center
+    embed-resources: true
+knitr:
+  opts_chunk:
+    fig.path: "../output/"
+execute:
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| echo: false
+
+# Load all packages needed for this report.
+# - tidyverse: data wrangling (dplyr) and plotting (ggplot2)
+# - here: build file paths relative to the project root, not the working directory
+# - palmerpenguins: the dataset used throughout this report
+# - kableExtra: turn a plain data frame into a nicely styled HTML table
+library(tidyverse)
+library(here)
+library(palmerpenguins)
+library(kableExtra)
+```
+
+## Introduction
+
+This report revisits the **`penguins`** dataset from the `palmerpenguins`
+package, which has already been used earlier in this course to explore
+flipper length and body mass. Here the focus shifts to a relationship we
+have *not* yet looked at closely: how **bill length** and **flipper
+length** relate to one another across the three species recorded at the
+Palmer Long-Term Ecological Research station in Antarctica -- *Adelie*,
+*Chinstrap*, and *Gentoo* penguins.
+
+The goals of this report are to:
+
+- clean the data and remove any incomplete records,
+- summarize body size by species and sex in a clean, readable table, and
+- visualize the relationship between bill length and flipper length with
+  a publication-quality figure.
+
+## Data Preparation
+
+Before summarizing or plotting anything, the raw `penguins` data are
+cleaned. Rows with missing measurements or unrecorded sex are dropped so
+that every summary statistic below is calculated from **complete cases
+only**. This keeps the table and the figure consistent with one another.
+
+```{r}
+#| label: clean-data
+
+# Drop any row with a missing value in the columns we actually use.
+# This avoids NA-driven warnings later and keeps the table and the
+# figure based on an identical set of individuals.
+penguins_clean <- penguins |>
+  drop_na(bill_length_mm, flipper_length_mm, body_mass_g, sex) |>
+  mutate(
+    species = as.factor(species),
+    sex = as.factor(sex)
+  )
+```
+
+After cleaning, the dataset contains `r nrow(penguins_clean)` penguins
+(out of `r nrow(penguins)` originally recorded), spread across three
+species and two islands of observation.
+
+## Summary Table
+
+@tbl-summary below reports the **mean bill length**, **mean flipper
+length**, and sample size for each combination of species and sex. Grouping
+by both variables shows that, within every species, males tend to have
+slightly longer bills and flippers than females -- a pattern worth keeping
+in mind before interpreting the scatter plot in the next section.
+
+```{r}
+#| label: tbl-summary
+#| tbl-cap: "Mean bill length and flipper length (mm) by species and sex, with sample sizes."
+
+penguin_summary <- penguins_clean |>
+  group_by(species, sex) |>
+  summarise(
+    n = n(),
+    mean_bill_length_mm = round(mean(bill_length_mm), 1),
+    mean_flipper_length_mm = round(mean(flipper_length_mm), 1),
+    .groups = "drop"
+  )
+
+# kableExtra turns the plain summary table into a styled HTML table:
+# striped rows, a bolded header, and hover-highlighting make it easy
+# to read on screen.
+penguin_summary |>
+  kbl(
+    col.names = c("Species", "Sex", "n", "Mean Bill Length (mm)",
+                  "Mean Flipper Length (mm)"),
+    align = "c"
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = "#0072B2")
+```
+
+## Visualizing the Relationship
+
+@fig-scatter shows bill length plotted against flipper length for every
+penguin in the cleaned dataset, colored by species. A few design choices
+were made deliberately, following best practices covered in lecture:
+
+1. **Color-blind-safe palette.** The three species are distinguished using
+   the Okabe-Ito palette (`#0072B2`, `#D55E00`, `#009E73`), which remains
+   distinguishable for the most common forms of color vision deficiency.
+2. **Linear trend lines per species**, added with `geom_smooth()`, make the
+   *within-species* relationship easy to see even though the species
+   overlap in places.
+3. **Clear, fully-labeled axes and a legend title**, so the figure can
+   stand alone without needing the surrounding text.
+
+```{r}
+#| label: fig-scatter
+#| fig-cap: "Bill length increases with flipper length within each penguin species. Points are individual penguins; lines are species-specific linear fits with 95% confidence ribbons."
+#| fig-width: 7
+#| fig-height: 5
+
+ggplot(penguins_clean, aes(x = flipper_length_mm, y = bill_length_mm,
+                            color = species)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_smooth(method = "lm", se = TRUE, linewidth = 1) +
+  scale_color_manual(values = c(
+    "Adelie" = "#0072B2",
+    "Chinstrap" = "#D55E00",
+    "Gentoo" = "#009E73"
+  )) +
+  labs(
+    title = "Bill Length vs. Flipper Length in Palmer Penguins",
+    subtitle = "Each species shows a positive within-species relationship",
+    x = "Flipper Length (mm)",
+    y = "Bill Length (mm)",
+    color = "Species"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15),
+    plot.subtitle = element_text(size = 11, color = "grey30"),
+    legend.position = "bottom"
+  )
+```
+
+Gentoo penguins (green) separate out clearly as the largest-bodied
+species, with the longest flippers and comparatively long bills, while
+Adelie and Chinstrap penguins overlap more in flipper length but remain
+distinguishable by bill length.
+
+## Conclusion
+
+Both the table and the figure tell a consistent story: body size in this
+dataset is *not* one-dimensional. Flipper length and bill length both
+increase together within each species, but the three species occupy
+different regions of that relationship -- meaning either measurement
+alone would be enough to make a reasonable guess at species identity for
+most individuals. The full, reproducible workflow behind both outputs
+(data cleaning, summarizing, and plotting) is documented in the code
+chunks above.

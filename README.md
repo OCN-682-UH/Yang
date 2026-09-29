@@ -14,6 +14,7 @@ Current contents include:
 - Additional weekly assignments and course materials will be added as the semester progresses
 - **Week 4** – dplyr and tidyr practice: penguin body mass summaries and a violin plot (dplyr), plus cleaning, separating, pivoting, and summarizing the Maunalua Bay groundwater chemistry data with a log-log scatter plot (tidyr)
 - **Week 5** – Joins and dates with lubridate: rounding and joining a conductivity logger to a depth logger by exact timestamp with inner_join(), averaging by minute, and a patchwork time-series plot of depth, temperature, and salinity
+- **Week 6** –  Quarto report - a rendered Quarto HTML document revisiting the palmerpenguins dataset, with a styled summary table (mean bill and flipper length by species and sex) and a publication-quality scatter plot (bill length vs. flipper length, colored by species with per-species trend lines) (scripts/, output/). Live published version: https://01a0ef8d-7fe0-f035-c5f5-7d3ac01f9074.share.connect.posit.cloud/
 
 The purpose of this repository is to practice organizing research projects, writing reproducible scripts, using Git and GitHub for version control, and documenting analyses clearly.
 
@@ -41,4 +42,10 @@ My academic interests include finance, data analysis, statistical modeling, and 
 │   ├── data
 │   ├── scripts
 │   └── output
+└── Week_06/
+    ├── scripts/
+    │   └── quarto_penguins_report.qmd
+    └── output/
+        ├── quarto_penguins_report.html
+        └── fig-scatter-1.png
 └── README.md
