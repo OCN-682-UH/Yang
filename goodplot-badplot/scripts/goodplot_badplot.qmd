@@ -1,0 +1,230 @@
+---
+title: "Good Plot / Bad Plot: European Stock Indices, 1991-1998"
+subtitle: "How the same dataset can lie to you or tell you the truth"
+author: "Yang An"
+date: today
+format:
+  html:
+    theme: flatly
+    toc: true
+    toc-location: left
+    code-fold: show
+    fig-align: center
+    embed-resources: true
+knitr:
+  opts_chunk:
+    fig.path: "../output/"
+execute:
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| echo: false
+
+# tidyverse: wrangling + plotting
+# lubridate: convert the dataset's decimal-year time index into real Dates
+library(tidyverse)
+library(lubridate)
+```
+
+## Introduction
+
+This report uses **`EuStockMarkets`**, a dataset built into base R containing
+the daily closing prices of four major European stock indices from 1991 to
+1998:
+
+- **DAX** (Germany, in Deutsche Marks)
+- **SMI** (Switzerland, in Swiss Francs)
+- **CAC** (France, in French Francs)
+- **FTSE** (United Kingdom, in British Pounds)
+
+The goal of this assignment is to show *the same underlying data* told two
+very different ways: first as a deliberately **bad, misleading plot**, and
+then as a **good, honest plot**. Every design choice below is intentional --
+the bad plot is a checklist of things *not* to do, and the good plot fixes
+each one.
+
+```{r}
+#| label: load-data
+
+# Convert the ts object into a tidy long-format data frame.
+# time() gives decimal years (e.g. 1991.496); date_decimal() turns that
+# into a real Date so we can filter and format it normally.
+eu_stocks <- as.data.frame(EuStockMarkets) |>
+  mutate(date = date_decimal(as.numeric(time(EuStockMarkets))) |> as.Date()) |>
+  pivot_longer(cols = c(DAX, SMI, CAC, FTSE),
+               names_to = "market_index",
+               values_to = "closing_level") |>
+  arrange(market_index, date)
+
+glimpse(eu_stocks)
+```
+
+## The Bad Plot
+
+::: {.callout-important}
+**Don't do this.** The plot below answers a real (bad) question a beginner
+might ask: *"which market is bigger?"* -- by just plotting the raw closing
+values on top of each other and drawing a dramatic conclusion.
+:::
+
+```{r}
+#| label: fig-bad
+#| fig-cap: "BAD: raw index levels plotted on a truncated axis, over a cherry-picked window, in clashing colors, with a misleading headline."
+#| fig-width: 8
+#| fig-height: 5.5
+
+# Cherry-pick a short, dramatic-looking window instead of the full
+# 1991-1998 history (hides the bigger, more representative picture).
+bad_data <- eu_stocks |>
+  filter(date >= as.Date("1997-08-01"), date <= as.Date("1997-11-30"))
+
+ggplot(bad_data, aes(x = date, y = closing_level, color = market_index)) +
+  # Fake "3D drop shadow" chart-junk: a thick, blurry duplicate line
+  # underneath that adds visual noise but zero information.
+  geom_line(aes(group = market_index), color = "black", alpha = 0.25,
+            linewidth = 5) +
+  geom_line(linewidth = 1.1) +
+  # Clashing, non-colorblind-safe neon palette.
+  scale_color_manual(values = c(
+    DAX = "#FF00FF", SMI = "#39FF14", CAC = "#00F0FF", FTSE = "#FFF200"
+  )) +
+  # Truncated y-axis: starts near the data minimum instead of zero,
+  # which exaggerates how far apart the four lines look.
+  coord_cartesian(ylim = c(3300, 4900)) +
+  labs(
+    # All-caps, editorializing, unsupported headline.
+    title = "FTSE OBLITERATES EUROPEAN MARKETS!!!",
+    x = NULL, y = NULL, color = NULL   # no axis labels, no units
+  ) +
+  theme(
+    # Garish background + heavy neon gridlines: pure chart-junk.
+    panel.background = element_rect(fill = "#CCFF00"),
+    panel.grid.major = element_line(color = "#FF66CC", linewidth = 1),
+    panel.grid.minor = element_line(color = "#FF66CC", linewidth = 0.5),
+    plot.title = element_text(size = 20, face = "bold", color = "#CC0000",
+                               hjust = 0.5),
+    # Tiny, hard-to-read axis text.
+    axis.text = element_text(size = 6),
+    # Legend plopped on top of the data instead of beside it.
+    legend.position = c(0.5, 0.85),
+    legend.background = element_rect(fill = "white", color = "black")
+  )
+```
+
+### Every principle this plot breaks
+
+1. **Truncated y-axis that deletes data, not just distorts it.** The axis
+   is fixed to 3300-4900. Over this exact window, CAC actually ranges from
+   2651-3094 and SMI from 5217-5930 -- both *entirely outside* those
+   limits. That's why the legend lists four indices but only two lines
+   (DAX and FTSE) are visible: CAC and SMI aren't small or hidden behind
+   another line, they've been clipped out of the plot completely by the
+   axis choice.
+2. **Apples-to-oranges units.** DAX, SMI, CAC, and FTSE are in four
+   *different currencies* with four different bases. Plotting their raw
+   levels together and declaring a "winner" is meaningless -- FTSE only
+   looks biggest because British pounds and the FTSE's index base happen
+   to produce larger numbers, not because the UK market performed better.
+3. **Cherry-picked time window.** Only four months (Aug-Nov 1997) are
+   shown, hand-picked because the lines happen to separate dramatically,
+   instead of the full 1991-1998 history.
+4. **Misleading, unsupported title.** "FTSE OBLITERATES EUROPEAN MARKETS"
+   is an editorial claim the data doesn't actually support once you
+   account for (1) and (2).
+5. **Non-colorblind-safe, clashing color palette.** Neon magenta, green,
+   cyan, and yellow are hard to tell apart and inaccessible to
+   colorblind viewers.
+6. **No axis labels or units.** A reader has no idea whether they're
+   looking at points, dollars, or percent.
+7. **Chart-junk.** The blurry "drop shadow" duplicate lines and the
+   neon background/gridlines add visual noise without adding
+   information -- they actively distract from the data.
+8. **Illegible tiny axis text** paired with a legend dropped **on top of
+   the data** instead of beside it, actively blocking part of the plot.
+9. **No data source cited**, so none of this could even be checked.
+
+## The Good Plot
+
+```{r}
+#| label: fig-good
+#| fig-cap: "GOOD: all four indices normalized to a common base (=100 at the start), full 1991-1998 history, colorblind-safe palette, clearly labeled."
+#| fig-width: 8
+#| fig-height: 5.5
+
+# Fix problem #2 first: normalize every index to 100 at its first
+# observation. This converts four incompatible currencies into one
+# comparable unit -- "percent of starting value" -- so the lines can
+# honestly be compared.
+good_data <- eu_stocks |>
+  group_by(market_index) |>
+  mutate(indexed_level = closing_level / first(closing_level) * 100) |>
+  ungroup()
+
+# A handful of raw monthly observations, drawn as points on top of the
+# line, so the underlying raw data points are visible, not just a
+# smoothed summary.
+monthly_points <- good_data |>
+  mutate(year_month = floor_date(date, "month")) |>
+  group_by(market_index, year_month) |>
+  slice(1) |>
+  ungroup()
+
+ggplot(good_data, aes(x = date, y = indexed_level, color = market_index)) +
+  # Full 1991-1998 history -- no cherry-picking.
+  geom_line(linewidth = 0.6) +
+  geom_point(data = monthly_points, size = 1, alpha = 0.6) +
+  # Mark the 1997 Asian Financial Crisis, the real story in this period.
+  geom_vline(xintercept = as.Date("1997-10-27"), linetype = "dashed",
+             color = "grey40", linewidth = 0.5) +
+  annotate("text", x = as.Date("1997-10-27"), y = 245,
+           label = "1997 Asian\nFinancial Crisis", hjust = -0.05,
+           size = 3.2, color = "grey30") +
+  # Colorblind-safe Okabe-Ito palette, used consistently all course.
+  scale_color_manual(values = c(
+    DAX = "#0072B2", SMI = "#D55E00", CAC = "#009E73", FTSE = "#CC79A7"
+  )) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  labs(
+    title = "European Stock Indices Grew Together, With a Shared 1997 Shock",
+    subtitle = "Daily closing levels indexed to 100 at the first trading day (1991)",
+    x = "Date",
+    y = "Index Level (start of period = 100)",
+    color = "Market Index",
+    caption = "Data: EuStockMarkets (base R), daily closes, 1991-1998"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 10, color = "grey30"),
+    legend.position = "right",
+    panel.grid.minor = element_blank()
+  )
+```
+
+### Why this version works
+
+- **Same base, fair comparison.** Every index starts at 100, so a reader
+  can directly compare *growth rates* across four different currencies --
+  something the bad plot never made possible.
+- **The full time series is shown**, not a cherry-picked slice, so the
+  1997 dip is visible in context as a shared shock across *all four*
+  markets rather than a dramatic isolated event.
+- **Colorblind-safe palette** (Okabe-Ito) keeps all four lines
+  distinguishable for every reader.
+- **Clear labels, units, and a caption** mean the plot can stand on its
+  own without the surrounding text.
+- **The legend sits beside the plot**, never covering data, and the
+  underlying raw daily closes are still what's plotted (with monthly
+  points layered on top) -- nothing here is smoothed or hidden.
+
+## Conclusion
+
+Both plots come from *exactly the same* underlying dataset. The only
+difference is a handful of design decisions -- whether the y-axis is
+truncated, whether the data is cherry-picked, whether units are made
+comparable, and whether the color palette and labeling respect the
+reader. Those decisions are the entire difference between a chart that
+misleads and a chart that informs.

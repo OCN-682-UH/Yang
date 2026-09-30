@@ -15,6 +15,7 @@ Current contents include:
 - **Week 4** – dplyr and tidyr practice: penguin body mass summaries and a violin plot (dplyr), plus cleaning, separating, pivoting, and summarizing the Maunalua Bay groundwater chemistry data with a log-log scatter plot (tidyr)
 - **Week 5** – Joins and dates with lubridate: rounding and joining a conductivity logger to a depth logger by exact timestamp with inner_join(), averaging by minute, and a patchwork time-series plot of depth, temperature, and salinity
 - **Week 6** –  Quarto report - a rendered Quarto HTML document revisiting the palmerpenguins dataset, with a styled summary table (mean bill and flipper length by species and sex) and a publication-quality scatter plot (bill length vs. flipper length, colored by species with per-species trend lines) (scripts/, output/). Live published version: https://01a0ef8d-7fe0-f035-c5f5-7d3ac01f9074.share.connect.posit.cloud/
+- **goodplot-badplot** – Good Plot / Bad Plot contest: a rendered Quarto document using the EuStockMarkets dataset (DAX, SMI, CAC, FTSE, 1991-1998) that builds a deliberately misleading plot (truncated axis, cherry-picked window, clashing colors, unsupported title) alongside an honest, normalized, colorblind-safe version of the same data, each with a written breakdown of every design choice (goodplot-badplot/data/, goodplot-badplot/scripts/, goodplot-badplot/output/). Live published version: https://01a0efcd-6f87-442a-5529-d253e2db03e1.share.connect.posit.cloud/
 
 The purpose of this repository is to practice organizing research projects, writing reproducible scripts, using Git and GitHub for version control, and documenting analyses clearly.
 
@@ -48,4 +49,13 @@ My academic interests include finance, data analysis, statistical modeling, and 
     └── output/
         ├── quarto_penguins_report.html
         └── fig-scatter-1.png
+└── goodplot-badplot/
+    ├── data/
+    │   └── eu_stock_markets_long.csv
+    ├── scripts/
+    │   └── goodplot_badplot.qmd
+    └── output/
+        ├── goodplot_badplot.html
+        ├── fig-bad-1.png
+        └── fig-good-1.png
 └── README.md
