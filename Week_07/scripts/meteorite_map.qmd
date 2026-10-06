@@ -1,0 +1,158 @@
+---
+title: "Mapping Global Meteorite Falls"
+subtitle: "Where meteorites have been seen falling or found, 860-2013"
+author: "Yang An"
+date: today
+format:
+  html:
+    theme: flatly
+    toc: true
+    toc-location: left
+    code-fold: show
+    fig-align: center
+    embed-resources: true
+knitr:
+  opts_chunk:
+    fig.path: "../output/"
+execute:
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| echo: false
+
+# tidyverse: wrangling + plotting
+# maps: supplies the world polygon data used by map_data("world")
+library(tidyverse)
+library(maps)
+```
+
+## Introduction
+
+This map uses the **Meteorite Landings** dataset (NASA's Meteoritical
+Bulletin Database, shared via the
+[TidyTuesday](https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-06-11)
+project), which records over 45,000 meteorites recovered or observed
+falling around the world. Each record includes where and when the
+meteorite landed, its mass, and whether it was:
+
+- **Fell** -- actually seen falling from the sky, or
+- **Found** -- discovered on the ground sometime after landing, with
+  no witnessed fall.
+
+The goal here is a single, clean map that shows *where* these events
+happened, distinguishes the two record types, and uses point size to
+show *how large* each meteorite was.
+
+## Data Preparation
+
+```{r}
+#| label: clean-data
+
+meteorites <- read_csv(here::here("Week_07", "data", "meteorites.csv"),
+                        show_col_types = FALSE)
+
+# Clean out records that would break or mislead the map:
+# - missing coordinates
+# - "null island" (0, 0) -- a classic placeholder for missing GPS data,
+#   not an actual location in the Gulf of Guinea for 6,000+ meteorites
+# - a longitude just over 180 degrees and a year of "2101" are both
+#   single obvious data-entry errors, not real locations/dates
+# - missing mass, since point size is mapped to mass below
+meteorites_clean <- meteorites |>
+  drop_na(lat, long, mass) |>
+  filter(
+    !(lat == 0 & long == 0),
+    long >= -180, long <= 180,
+    year <= 2016
+  )
+```
+
+After cleaning, `r nrow(meteorites_clean)` of the original
+`r nrow(meteorites)` records remain (the rest were missing coordinates,
+placeholder "null island" coordinates, or a couple of obvious
+data-entry errors).
+
+## The Map
+
+```{r}
+#| label: fig-meteorite-map
+#| fig-cap: "Global meteorite landings, colored by whether the fall was witnessed (Fell) or the meteorite was discovered afterward (Found). Point size reflects mass on a log scale."
+#| fig-width: 10
+#| fig-height: 5.5
+
+world_map <- map_data("world")
+
+ggplot() +
+  # Base world map, drawn first so points layer on top of it.
+  geom_polygon(
+    data = world_map,
+    aes(x = long, y = lat, group = group),
+    fill = "grey90", color = "white", linewidth = 0.1
+  ) +
+  # Each meteorite as a point; size shows mass (log scale, since mass
+  # ranges from under a gram to tens of thousands of kilograms), color
+  # shows whether the fall was witnessed.
+  geom_point(
+    data = meteorites_clean,
+    aes(x = long, y = lat, size = mass, color = fall),
+    alpha = 0.25, stroke = 0
+  ) +
+  # Colorblind-safe two-color palette (Okabe-Ito).
+  scale_color_manual(
+    values = c(Fell = "#0072B2", Found = "#D55E00"),
+    name = "Record type"
+  ) +
+  # A deliberately narrow size range: with >30,000 overlapping points,
+  # large point sizes just merge into solid blobs and hide the
+  # continents underneath. Small, mostly-transparent points let
+  # geographic density patterns remain visible.
+  scale_size_continuous(
+    name = "Mass (g, log scale)",
+    trans = "log10",
+    range = c(0.15, 3),
+    labels = scales::label_comma()
+  ) +
+  coord_quickmap() +
+  labs(
+    title = "Global Meteorite Landings",
+    subtitle = paste0(scales::comma(nrow(meteorites_clean)),
+                       " recorded meteorites, 860-2013"),
+    caption = "Data: NASA Meteoritical Bulletin via TidyTuesday (2019-06-11)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid = element_blank(),
+    plot.title = element_text(face = "bold", size = 15),
+    plot.subtitle = element_text(size = 11, color = "grey30"),
+    legend.position = "right"
+  )
+```
+
+## Interpretation
+
+A few patterns jump out immediately:
+
+1. **"Found" meteorites (orange) are heavily concentrated** in a handful
+   of regions -- especially Antarctica and the Sahara -- where dark
+   meteorites are easy to spot against ice or sand, and dedicated search
+   expeditions have combed the ground for them. This is a *detection*
+   pattern as much as a *landing* pattern: meteorites fall roughly
+   uniformly over Earth's surface, but we only find a tiny, biased
+   sample of them.
+2. **"Fell" meteorites (blue) are more evenly spread** across populated
+   continents, because they require a human witness -- so they track
+   population density rather than any real geographic pattern in where
+   meteorites land.
+3. **A few very large points** stand out, representing historically
+   massive meteorite falls recorded in the database.
+
+The map intentionally keeps latitude/longitude gridlines and axis text
+off, since they add clutter without adding information once the
+continents themselves are visible -- the title, legend, and caption
+carry all the context a reader needs.
